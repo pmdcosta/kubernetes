@@ -1,0 +1,6 @@
+---
+- hosts: master
+  sudo: yes
+  roles:
+    - master
+
