@@ -1,6 +1,5 @@
 ---
-- hosts: master
+- hosts: nodes
   sudo: yes
   roles:
-    - master
-
+    - node

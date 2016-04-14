@@ -16,7 +16,6 @@
   with_items:
     - ca
     - master
-    - minion
     - admin
 
 - name: SSL | Create CA key
@@ -36,27 +35,6 @@
 
 - name: SSL | Sign master certificate
   shell: openssl x509 -req -in /home/core/ssl/master/apiserver.csr -CA /home/core/ssl/ca/ca.pem -CAkey /home/core/ssl/ca/ca-key.pem -CAcreateserial -out /home/core/ssl/master/apiserver.pem -days 365 -extensions v3_req -extfile /home/core/ssl/master/openssl.cnf
-
-- name: SSL | Set ssl-minion configuration
-  template: src=worker-openssl.cnf.j2 dest=/home/core/ssl/minion/worker-openssl.cnf
-
-- name: SSL | Create minion-01 key
-  shell: openssl genrsa -out /home/core/ssl/minion/{{ MINION_01_FQDN }}-worker-key.pem 2048
-
-- name: SSL | Create minion-01 certificate
-  shell: WORKER_IP={{ MINION_01_IP }} WORKER_IP_PUB={{ MINION_01_IP_PUB }} openssl req -new -key /home/core/ssl/minion/{{ MINION_01_FQDN }}-worker-key.pem -out /home/core/ssl/minion/{{ MINION_01_FQDN }}-worker.csr -subj "/CN={{ MINION_01_FQDN }}" -config /home/core/ssl/minion/worker-openssl.cnf
-
-- name: SSL | Sign minion-01 certificate
-  shell: WORKER_IP={{ MINION_01_IP }} WORKER_IP_PUB={{ MINION_02_IP_PUB }} openssl x509 -req -in /home/core/ssl/minion/{{ MINION_01_FQDN }}-worker.csr -CA /home/core/ssl/ca/ca.pem -CAkey /home/core/ssl/ca/ca-key.pem -CAcreateserial -out /home/core/ssl/minion/{{ MINION_01_FQDN }}-worker.pem -days 365 -extensions v3_req -extfile /home/core/ssl/minion/worker-openssl.cnf
-
-- name: SSL | Create minion-02 key
-  shell: openssl genrsa -out /home/core/ssl/minion/{{ MINION_02_FQDN }}-worker-key.pem 2048
-
-- name: SSL | Create minion-02 certificate
-  shell: WORKER_IP={{ MINION_02_IP }} WORKER_IP_PUB={{ MINION_02_IP_PUB }} openssl req -new -key /home/core/ssl/minion/{{ MINION_02_FQDN }}-worker-key.pem -out /home/core/ssl/minion/{{ MINION_02_FQDN }}-worker.csr -subj "/CN={{ MINION_02_FQDN }}" -config /home/core/ssl/minion/worker-openssl.cnf
-
-- name: SSL | Sign minion-02 certificate
-  shell: WORKER_IP={{ MINION_02_IP }} WORKER_IP_PUB={{ MINION_02_IP_PUB }} openssl x509 -req -in /home/core/ssl/minion/{{ MINION_02_FQDN }}-worker.csr -CA /home/core/ssl/ca/ca.pem -CAkey /home/core/ssl/ca/ca-key.pem -CAcreateserial -out /home/core/ssl/minion/{{ MINION_02_FQDN }}-worker.pem -days 365 -extensions v3_req -extfile /home/core/ssl/minion/worker-openssl.cnf
 
 - name: SSL | Create admin key
   shell: openssl genrsa -out /home/core/ssl/admin/admin-key.pem 2048
@@ -86,7 +64,13 @@
     - apiserver-key.pem
     - apiserver.pem
 
-- name: SSL | Create kubernetes ssl directory
+- name: SSL | Import certificates
+  fetch: src=/home/core/ssl/ca/{{ item }} dest=roles/node/files/ flat=yes
+  with_items:
+    - ca.pem
+    - ca-key.pem
+
+- name: Flannel | Create Flannel config directory
   file: path=/etc/flannel/ state=directory mode=0755
 
 - name: Flannel | Set flannel configuration
@@ -137,4 +121,11 @@
 - name: Kubelet | Enable kubelet service
   service: name=kubelet enabled=yes
 
+- name: Wait | 
+  wait_for: port=8080 delay=30
 
+- name: Flannel | Configure flannel Network
+  shell: curl -X PUT -d "value={\"Network\":\"{{ POD_NETWORK }}\",\"Backend\":{\"Type\":\"vxlan\"}}" "{{ ETCD_ENDPOINTS }}/v2/keys/coreos.com/network/config"
+
+- name: Kube-System | Create kube-system namespace
+  shell: curl -X POST -H "Content-Type:application/json" -d "{\"apiVersion\":\"v1\",\"kind\":\"Namespace\",\"metadata\":{\"name\":\"kube-system\"}}" "http://127.0.0.1:8080/api/v1/namespaces"

@@ -10,3 +10,7 @@
   roles:
     - master
 
+- hosts: nodes
+  sudo: yes
+  roles:
+    - node

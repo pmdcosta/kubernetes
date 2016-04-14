@@ -1,0 +1,19 @@
+[Service]
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+
+Environment=KUBELET_VERSION={{ K8S_VER }}
+ExecStart=/usr/lib/coreos/kubelet-wrapper \
+  --api-servers=https://{{ MASTER_HOST }} \
+  --register-node=true \
+  --allow-privileged=true \
+  --config=/etc/kubernetes/manifests \
+  --hostname-override={{ PRIVATE_IP }} \
+  --cluster-dns={{ DNS_SERVICE_IP }} \
+  --cluster-domain=cluster.local \
+  --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
+  --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
+  --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
+Restart=always
+RestartSec=10
+[Install]
+WantedBy=multi-user.target
