@@ -1,0 +1,14 @@
+MASTER_HOST: $MASTER_HOST_PRI
+MASTER_HOST_PUB: $MASTER_HOST_PUB 
+
+ETCD_ENDPOINTS: http://{{ MASTER_HOST }}:2379
+
+POD_NETWORK: 10.2.0.0/16
+SERVICE_IP_RANGE: 10.3.0.0/24
+K8S_SERVICE_IP: 10.3.0.1
+DNS_SERVICE_IP: 10.3.0.10
+
+K8S_VER: v1.2.0_coreos.1
+
+ansible_ssh_user: core
+ansible_python_interpreter: "PATH=/opt/bin:$PATH python"

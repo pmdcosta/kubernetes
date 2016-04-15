@@ -1,0 +1,6 @@
+[master]
+coreos-master
+
+[nodes]
+coreos-01	PRIVATE_IP=	PUBLIC_IP=
+coreos-02	PRIVATE_IP=	PUBLIC_IP=

@@ -1,0 +1,91 @@
+---
+- name: SSL | Create directories for ssl certificates
+  file: path=/home/core/ssl/{{ item }} state=directory mode=0755
+  with_items:
+    - ca
+    - minion
+
+- name: SSL | Copy CA certificates
+  copy: src={{ item }} dest=/home/core/ssl/ca
+  with_items:
+    - ca.pem
+    - ca-key.pem
+
+- name: SSL | Set ssl-minion configuration
+  template: src=worker-openssl.cnf.j2 dest=/home/core/ssl/minion/worker-openssl.cnf
+
+- name: SSL | Create minion key
+  shell: openssl genrsa -out /home/core/ssl/minion/{{ inventory_hostname }}-key.pem 2048
+
+- name: SSL | Create minion certificate
+  shell: WORKER_IP={{ PRIVATE_IP }} WORKER_IP_PUB={{ PUBLIC_IP }} openssl req -new -key /home/core/ssl/minion/{{ inventory_hostname }}-key.pem -out /home/core/ssl/minion/{{ inventory_hostname }}.csr -subj "/CN={{ inventory_hostname }}" -config /home/core/ssl/minion/worker-openssl.cnf
+
+- name: SSL | Sign minion certificate
+  shell: WORKER_IP={{ PRIVATE_IP }} WORKER_IP_PUB={{ PUBLIC_IP }} openssl x509 -req -in /home/core/ssl/minion/{{ inventory_hostname }}.csr -CA /home/core/ssl/ca/ca.pem -CAkey /home/core/ssl/ca/ca-key.pem -CAcreateserial -out /home/core/ssl/minion/{{ inventory_hostname }}.pem -days 365 -extensions v3_req -extfile /home/core/ssl/minion/worker-openssl.cnf
+
+- name: SSL | Create kubernetes ssl directory
+  file: path=/etc/kubernetes/ssl state=directory mode=0755
+
+- name: SSL | Move ssl certificates to kubernetes
+  shell: cp /home/core/ssl/ca/ca.pem /etc/kubernetes/ssl/ca.pem 
+
+- name: SSL | Move ssl certificates to kubernetes
+  shell: cp /home/core/ssl/minion/{{ inventory_hostname }}.pem /etc/kubernetes/ssl/{{ inventory_hostname }}.pem
+
+- name: SSL | Move ssl certificates to kubernetes
+  shell: cp /home/core/ssl/minion/{{ inventory_hostname }}-key.pem /etc/kubernetes/ssl/{{ inventory_hostname }}-key.pem
+
+- name: SSL | Set proper permissions
+  file: path=/etc/kubernetes/ssl/{{ item }} owner=root group=root mode=600
+  with_items:
+    - ca.pem
+    - "{{ inventory_hostname }}.pem"
+    - "{{ inventory_hostname }}-key.pem"
+
+- name: SSL | Create symlinks
+  file: src=/etc/kubernetes/ssl/{{ inventory_hostname }}.pem dest=/etc/kubernetes/ssl/worker.pem state=link
+
+- name: SSL | Create symlinks
+  file: src=/etc/kubernetes/ssl/{{ inventory_hostname }}-key.pem dest=/etc/kubernetes/ssl/worker-key.pem state=link
+
+- name: Flannel | Create Flannel config directory
+  file: path=/etc/flannel/ state=directory mode=0755
+
+- name: Flannel | Set flannel configuration
+  template: src=options.env.j2 dest=/etc/flannel/options.env
+
+- name: Flannel | Create flannel drop-in directory
+  file: path=/etc/systemd/system/flanneld.service.d/ state=directory mode=0755
+
+- name: Flannel | Create flannel drop-in
+  template: src=40-ExecStartPre-symlink.conf.j2 dest=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf
+
+- name: Docker | Create Docker drop-in directory
+  file: path=/etc/systemd/system/docker.service.d/ state=directory mode=0755
+
+- name: Docker | Create Docker drop-in
+  template: src=40-flannel.conf.j2 dest=/etc/systemd/system/docker.service.d/40-flannel.conf
+
+- name: Kubelet | Create systemd directory
+  file: path=/etc/systemd/system/ state=directory mode=0755
+
+- name: Kubelet | Create kubelet drop-in
+  template: src=kubelet.service.j2 dest=/etc/systemd/system/kubelet.service
+
+- name: Kubernetes | Create kubernetes manifest directory
+  file: path=/etc/kubernetes/manifests/ state=directory mode=0755
+
+- name: Proxy | Set Up the kube-proxy Pod
+  template: src=kube-proxy.yaml.j2 dest=/etc/kubernetes/manifests/kube-proxy.yaml
+
+- name: Kubeconfig | Set Up kubeconfig
+  template: src=worker-kubeconfig.yaml.j2 dest=/etc/kubernetes/manifests/worker-kubeconfig.yaml
+
+- name: Services | Reload services
+  shell: systemctl daemon-reload
+
+- name: Kubelet | Start kubelet service
+  service: name=kubelet state=started
+
+- name: Kubelet | Enable kubelet service
+  service: name=kubelet enabled=yes

@@ -1,0 +1,137 @@
+---
+- name: ETCD | Create etcd directory
+  file: path=/etc/systemd/system/etcd2.service.d state=directory mode=0755
+
+- name: ETCD | Set etcd configuration
+  template: src=40-listen-address.conf.j2 dest=/etc/systemd/system/etcd2.service.d/40-listen-address.conf
+
+- name: ETCD | Start etcd service
+  service: name=etcd2 state=started
+
+- name: ETCD | Enable etcd service
+  service: name=etcd2 enabled=yes
+
+- name: SSL | Create directories for ssl certificates
+  file: path=/home/core/ssl/{{ item }} state=directory mode=0755
+  with_items:
+    - ca
+    - master
+    - admin
+
+- name: SSL | Create CA key
+  shell: openssl genrsa -out /home/core/ssl/ca/ca-key.pem 2048
+
+- name: SSL | Create CA certificate
+  shell: openssl req -x509 -new -nodes -key /home/core/ssl/ca/ca-key.pem -days 10000 -out /home/core/ssl/ca/ca.pem -subj "/CN=kube-ca"
+
+- name: SSL | Set ssl-master configuration
+  template: src=openssl.cnf.j2 dest=/home/core/ssl/master/openssl.cnf
+
+- name: SSL | Create master key
+  shell: openssl genrsa -out /home/core/ssl/master/apiserver-key.pem 2048
+
+- name: SSL | Create master certificate
+  shell: openssl req -new -key /home/core/ssl/master/apiserver-key.pem -out /home/core/ssl/master/apiserver.csr -subj "/CN=kube-apiserver" -config /home/core/ssl/master/openssl.cnf
+
+- name: SSL | Sign master certificate
+  shell: openssl x509 -req -in /home/core/ssl/master/apiserver.csr -CA /home/core/ssl/ca/ca.pem -CAkey /home/core/ssl/ca/ca-key.pem -CAcreateserial -out /home/core/ssl/master/apiserver.pem -days 365 -extensions v3_req -extfile /home/core/ssl/master/openssl.cnf
+
+- name: SSL | Create admin key
+  shell: openssl genrsa -out /home/core/ssl/admin/admin-key.pem 2048
+
+- name: SSL | Create admin certificate
+  shell: openssl req -new -key /home/core/ssl/admin/admin-key.pem -out /home/core/ssl/admin/admin.csr -subj "/CN=kube-admin"
+
+- name: SSL | Sign admin certificate
+  shell: openssl x509 -req -in /home/core/ssl/admin/admin.csr -CA /home/core/ssl/ca/ca.pem -CAkey /home/core/ssl/ca/ca-key.pem -CAcreateserial -out /home/core/ssl/admin/admin.pem -days 365
+
+- name: SSL | Create kubernetes ssl directory
+  file: path=/etc/kubernetes/ssl state=directory mode=0755
+
+- name: SSL | Move ssl certificates to kubernetes
+  shell: cp /home/core/ssl/ca/ca.pem /etc/kubernetes/ssl/ca.pem 
+
+- name: SSL | Move ssl certificates to kubernetes
+  shell: cp /home/core/ssl/master/apiserver.pem /etc/kubernetes/ssl/apiserver.pem
+
+- name: SSL | Move ssl certificates to kubernetes
+  shell: cp /home/core/ssl/master/apiserver-key.pem /etc/kubernetes/ssl/apiserver-key.pem
+
+- name: SSL | Set proper permissions
+  file: path=/etc/kubernetes/ssl/{{ item }} owner=root group=root mode=600
+  with_items:
+    - ca.pem
+    - apiserver-key.pem
+    - apiserver.pem
+
+- name: SSL | Import ca certificate
+  fetch: src=/home/core/ssl/ca/{{ item }} dest=roles/node/files/ flat=yes
+  with_items:
+    - ca.pem
+    - ca-key.pem
+
+- name: SSL | Import admin certificates
+  fetch: src=/home/core/ssl/admin/{{ item }} dest=roles/master/files/ flat=yes
+  with_items:
+    - admin-key.pem
+    - admin.pem
+
+- name: Flannel | Create Flannel config directory
+  file: path=/etc/flannel/ state=directory mode=0755
+
+- name: Flannel | Set flannel configuration
+  template: src=options.env.j2 dest=/etc/flannel/options.env
+
+- name: Flannel | Create flannel drop-in directory
+  file: path=/etc/systemd/system/flanneld.service.d/ state=directory mode=0755
+
+- name: Flannel | Create flannel drop-in
+  template: src=40-ExecStartPre-symlink.conf.j2 dest=/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf
+
+- name: Docker | Create Docker drop-in directory
+  file: path=/etc/systemd/system/docker.service.d/ state=directory mode=0755
+
+- name: Docker | Create Docker drop-in
+  template: src=40-flannel.conf.j2 dest=/etc/systemd/system/docker.service.d/40-flannel.conf
+
+- name: Kubelet | Create systemd directory
+  file: path=/etc/systemd/system/ state=directory mode=0755
+
+- name: Kubelet | Create kubelet drop-in
+  template: src=kubelet.service.j2 dest=/etc/systemd/system/kubelet.service
+
+- name: Kubernetes | Create kubernetes manifest directory
+  file: path=/etc/kubernetes/manifests/ state=directory mode=0755
+
+- name: Apiserver | Set Up the kube-apiserver Pod
+  template: src=kube-apiserver.yaml.j2 dest=/etc/kubernetes/manifests/kube-apiserver.yaml
+
+- name: Proxy | Set Up the kube-proxy Pod
+  template: src=kube-proxy.yaml.j2 dest=/etc/kubernetes/manifests/kube-proxy.yaml
+
+- name: Controller-manager | Set Up the kube-controller-manager Pod
+  template: src=kube-controller-manager.yaml.j2 dest=/etc/kubernetes/manifests/kube-controller-manager.yaml
+
+- name: Scheduler | Set Up the kube-scheduler Pod
+  template: src=kube-scheduler.yaml.j2 dest=/etc/kubernetes/manifests/kube-scheduler.yaml
+
+- name: Services | Reload services
+  shell: systemctl daemon-reload
+
+- name: Flannel | Configure flannel Network
+  shell: curl -X PUT -d "value={\"Network\":\"{{ POD_NETWORK }}\",\"Backend\":{\"Type\":\"vxlan\"}}" "{{ ETCD_ENDPOINTS }}/v2/keys/coreos.com/network/config"
+
+- name: Kubelet | Start kubelet service
+  service: name=kubelet state=started
+
+- name: Kubelet | Enable kubelet service
+  service: name=kubelet enabled=yes
+
+- name: Wait | 
+  wait_for: port=8080 delay=30
+
+- name: Flannel | Configure flannel Network
+  shell: curl -X PUT -d "value={\"Network\":\"{{ POD_NETWORK }}\",\"Backend\":{\"Type\":\"vxlan\"}}" "{{ ETCD_ENDPOINTS }}/v2/keys/coreos.com/network/config"
+
+- name: Kube-System | Create kube-system namespace
+  shell: curl -X POST -H "Content-Type:application/json" -d "{\"apiVersion\":\"v1\",\"kind\":\"Namespace\",\"metadata\":{\"name\":\"kube-system\"}}" "http://127.0.0.1:8080/api/v1/namespaces"

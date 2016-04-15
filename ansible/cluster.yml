@@ -1,0 +1,16 @@
+---
+- hosts: all
+  gather_facts: false
+  sudo: yes
+  roles:
+    - pre-ansible
+
+- hosts: master
+  sudo: yes
+  roles:
+    - master
+
+- hosts: nodes
+  sudo: yes
+  roles:
+    - node

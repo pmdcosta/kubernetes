@@ -1,6 +1,0 @@
-[master]
-coreos-master
-
-[nodes]
-coreos-01	PRIVATE_IP=10.131.12.239	PUBLIC_IP=139.59.175.149
-coreos-02	PRIVATE_IP=10.131.15.66		PUBLIC_IP=139.59.168.75

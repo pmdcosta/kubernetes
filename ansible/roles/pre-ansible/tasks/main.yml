@@ -1,0 +1,38 @@
+---
+- name: Create bootstrap directory
+  raw: mkdir -p /opt/bin
+
+- name: Download pypy source
+  raw: wget -O /tmp/pypy-2.4.0-linux64.tar.bz2 https://bitbucket.org/pypy/pypy/downloads/pypy-2.4.0-linux64.tar.bz2
+
+- name: Extract pypy tar to tmp
+  raw: tar -xjf /tmp/pypy-2.4.0-linux64.tar.bz2 -C /tmp
+
+- name: Move pypy source to python bootstrap directory
+  raw: mv -n /tmp/pypy-2.4.0-linux64 /opt/bin/pypy
+
+- name: Make pypy lib directory and link ncurses .so
+  raw: mkdir -p /opt/bin/pypy/lib && ln -snf /lib64/libncurses.so.5.9 /opt/bin/pypy/lib/libtinfo.so.5
+
+- name: Add python exec script to bootstrap directory
+  raw: >
+         printf "%s\n%s"
+         "#! /bin/bash"
+         "LD_LIBRARY_PATH=/opt/bin/pypy/lib:\$LD_LIBRARY_PATH exec /opt/bin/pypy/bin/pypy \"\$@\""
+         > /opt/bin/python
+
+- name: Add exec permission to python exec script
+  raw: chmod +x /opt/bin/python
+
+- name: Check python executable linkage and mark .bootstrapped
+  raw: "/opt/bin/python --version"
+
+- name: Add opt-path.sh to profile.d for adding python exec PATH
+  raw: >
+          printf "%s\n%s"
+          "#! /usr/bin/bash"
+          "PATH=\$PATH:/usr/bin"
+          > /etc/profile.d/opt-path.sh
+
+- name: Change permissions and ownership for opt-path.sh to run as root
+  raw: chmod 0755 /etc/profile.d/opt-path.sh && chown root /etc/profile.d/opt-path.sh
