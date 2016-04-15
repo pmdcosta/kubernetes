@@ -1,5 +1,0 @@
----
-- hosts: nodes
-  sudo: yes
-  roles:
-    - node

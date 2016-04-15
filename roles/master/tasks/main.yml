@@ -64,11 +64,17 @@
     - apiserver-key.pem
     - apiserver.pem
 
-- name: SSL | Import certificates
+- name: SSL | Import ca certificate
   fetch: src=/home/core/ssl/ca/{{ item }} dest=roles/node/files/ flat=yes
   with_items:
     - ca.pem
     - ca-key.pem
+
+- name: SSL | Import admin certificates
+  fetch: src=/home/core/ssl/admin/{{ item }} dest=roles/master/files/ flat=yes
+  with_items:
+    - admin-key.pem
+    - admin.pem
 
 - name: Flannel | Create Flannel config directory
   file: path=/etc/flannel/ state=directory mode=0755

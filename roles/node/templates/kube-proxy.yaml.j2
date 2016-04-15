@@ -12,14 +12,14 @@ spec:
     - /hyperkube
     - proxy
     - --master=https://{{ MASTER_HOST }}
-    - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
+    - --kubeconfig=/etc/kubernetes/manifests/worker-kubeconfig.yaml
     - --proxy-mode=iptables
     securityContext:
       privileged: true
     volumeMounts:
       - mountPath: /etc/ssl/certs
         name: "ssl-certs"
-      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
+      - mountPath: /etc/kubernetes/manifests/worker-kubeconfig.yaml
         name: "kubeconfig"
         readOnly: true
       - mountPath: /etc/kubernetes/ssl
