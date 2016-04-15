@@ -17,6 +17,8 @@ The playbooks will:
 - The communication between the CoreOS, Kubernetes, and etcd services will be encrypted and authenticated
 
 ## Usage
+Only works on CoreOS version 962.0.0+.
+
 - Start by creating/provisioning the machines/vms.
 - Record the address' of the master machine, and add them to group_vars and the inventory.
 - Record the address' of the worker machines, and add them to the inventory.
