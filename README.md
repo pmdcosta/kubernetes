@@ -27,9 +27,17 @@ Only works on CoreOS version 962.0.0+.
 - Move the certificates to the kubectl dir, edit setup.sh with the correct address and run it.
 - The cli kubectl is now configured and can be used to access the cluster.
 
+Addons:
+
+- After setting up the cluster, the addons can be deployed using kubectl.
+- Simply run kubectl create -f <addon.yaml> on the addons directory
+- DNS will be deployed, and does not need configuring.
+- The dashboard will be deployed, but to access it run: kubectl proxy --port=9090
+- To access the dashboard go to https://localhost:9090/ui
+
+
 ## Increasing the cluster
 In order to add more nodes to the cluster, simply create a new inventory file, with the address of the new nodes. The CA certificate and key of the cluster must be supplied in the node/files directory.
 
 ## TODO
-- Add additional add-ons, such as Dash/UI
 - Refactor playbooks

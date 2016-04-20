@@ -1,4 +1,4 @@
-MASTER_HOST=$MASTER_HOST_IP
+MASTER_HOST=kube-master.qold.co
 CA_CERT=$(pwd)/ca.pem
 ADMIN_KEY=$(pwd)/admin-key.pem
 ADMIN_CERT=$(pwd)/admin.pem
