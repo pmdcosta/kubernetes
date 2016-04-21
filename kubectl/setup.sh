@@ -1,4 +1,6 @@
-MASTER_HOST=kube-master.qold.co
+#!/usr/bin/env bash
+
+MASTER_HOST=kube-master.cloud.qold.co
 CA_CERT=$(pwd)/ca.pem
 ADMIN_KEY=$(pwd)/admin-key.pem
 ADMIN_CERT=$(pwd)/admin.pem

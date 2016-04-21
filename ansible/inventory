@@ -1,6 +1,6 @@
 [master]
-kube-master.qold.co
+kube-master.cloud.qold.co
 
 [nodes]
-kube-01.qold.co		PRIVATE_IP=10.131.18.165		PUBLIC_IP=139.59.166.134
-kube-02.qold.co		PRIVATE_IP=10.131.18.166		PUBLIC_IP=139.59.166.152
+kube-minion01.cloud.qold.co		PRIVATE_IP=-		PUBLIC_IP=-
+kube-minion02.cloud.qold.co		PRIVATE_IP=-		PUBLIC_IP=-

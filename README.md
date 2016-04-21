@@ -33,7 +33,7 @@ Addons:
 - Simply run kubectl create -f <addon.yaml> on the addons directory
 - DNS will be deployed, and does not need configuring.
 - The dashboard will be deployed, but to access it run: kubectl proxy --port=9090
-- To access the dashboard go to https://localhost:9090/ui
+- To access the dashboard go to http://localhost:9090/ui
 
 
 ## Increasing the cluster
