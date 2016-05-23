@@ -2,5 +2,4 @@
 kube-master.cloud.qold.co
 
 [nodes]
-kube-minion01.cloud.qold.co		PRIVATE_IP=-		PUBLIC_IP=-
-kube-minion02.cloud.qold.co		PRIVATE_IP=-		PUBLIC_IP=-
+kube-minion01.cloud.qold.co		PRIVATE_IP=****		PUBLIC_IP=****

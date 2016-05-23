@@ -1,0 +1,11 @@
+---
+- hosts: nodes
+  gather_facts: false
+  sudo: yes
+  roles:
+    - pre-ansible
+
+- hosts: nodes
+  sudo: yes
+  roles:
+    - node
